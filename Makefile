@@ -12,30 +12,23 @@
 CXX      = g++
 
 # C++ compiler flags
-CXXFLAGS := -std=c++17 -g -pthread
-# CXXFLAGS := -std=c++17 -O3 -pthread
-
-# Linker
-LINK     := $(CXX)
-
-# Linker flags
-LDFLAGS  := -lpthread
+CXXFLAGS := -std=c++17 -g -Wall -Werror -pthread
+# CXXFLAGS := -std=c++17 -O3 -Wall -Werror -pthread
 
 #############################################################
 # Rules                                                     #
 #############################################################
 
-driver : driver.o 
-	$(LINK) $(LDFLAGS) $^ $(LDLIBS) -o $@
-
-driver.o : driver.cpp Cube.hpp
+driver : driver.cpp 
+	$(CXX) $(CXXFLAGS) $^ -o $@
 
 #############################################################
 
+.PHONY: driver
+
 clean :
-	@$(RM) driver a.out core
+	@$(RM) driver
 	@$(RM) *.o
-	@$(RM) *.d
 	@$(RM) *~ 
 
 #############################################################

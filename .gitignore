@@ -2,3 +2,4 @@
 *.txt
 .autolab-asmt
 compile_commands.json
+driver

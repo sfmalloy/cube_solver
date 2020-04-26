@@ -27,79 +27,79 @@ typedef piece_t* moveCycle_t;
 struct move_t
 {
   unsigned index;
-	std::vector<moveCycle_t> cycles;
+  std::vector<moveCycle_t> cycles;
 };
 
 class Cube
 {
 public:
-	// default ctor
-	Cube()
-	{
-		for (unsigned i = 0; i < PIECE_COUNT; ++i)
-      m_cube[i] = i + 1;		  
+  // default ctor
+  Cube()
+  {
+    for (unsigned i = 0; i < PIECE_COUNT; ++i)
+      m_cube[i] = i + 1;      
 
-		// initialize move cycle groups
-	  initCycles();
+    // initialize move cycle groups
+    initCycles();
   }
-	
-	// copy ctor
-	Cube(Cube& other)
-	{
+  
+  // copy ctor
+  Cube(Cube& other)
+  {
     initCycles();
     std::copy(std::begin(other.m_cube), std::end(other.m_cube), std::begin(m_cube));
-	}
+  }
 
-	~Cube()
-	{
-		for (auto& p : m_moveMap)
-			for (auto& cycle : p.second.cycles)
-				delete[] cycle;
-	}
+  ~Cube()
+  {
+    for (auto& p : m_moveMap)
+      for (auto& cycle : p.second.cycles)
+        delete[] cycle;
+  }
 
   void
   initCycles()
   {
-		std::ifstream cyclesFile("cycles.txt");
-		if (!cyclesFile.is_open())
-		{
-			std::cout << "Failed to open cycles file, exiting\n";
-			exit(1);
-		}
-		else
-		{
-			std::string line, token;
-			unsigned nameIndex = 0, i = 0;
+    std::ifstream cyclesFile("cycles.txt");
+    if (!cyclesFile.is_open())
+    {
+      std::cout << "Failed to open cycles file, exiting\n";
+      exit(1);
+    }
+    else
+    {
+      std::string line, token;
+      unsigned nameIndex = 0, i = 0;
 
       while (std::getline(cyclesFile, line))
-			{
-				std::stringstream tokenize(line);
-				moveCycle_t cycle = new piece_t[CYCLE_LENGTH];
-				move_t currMove;
-					
-				while (std::getline(tokenize, token, ' '))
-				{
-					cycle[i] = std::stoi(token) - 1;
-					++i;
-					
-					if (i == CYCLE_LENGTH)
-					{
-						currMove.cycles.push_back(cycle);
-						cycle = new piece_t[CYCLE_LENGTH];
-						i = 0;
-					}
-				}
+      {
+        std::stringstream tokenize(line);
+        moveCycle_t cycle = new piece_t[CYCLE_LENGTH];
+        move_t currMove;
+          
+        while (std::getline(tokenize, token, ' '))
+        {
+          cycle[i] = std::stoi(token) - 1;
+          ++i;
+          
+          if (i == CYCLE_LENGTH)
+          {
+            currMove.cycles.push_back(cycle);
+            cycle = new piece_t[CYCLE_LENGTH];
+            i = 0;
+          }
+        }
         currMove.index = nameIndex;
-				m_moveMap[MOVE_NAMES[nameIndex++]] = currMove;
+        m_moveMap[MOVE_NAMES[nameIndex++]] = currMove;
 
-				delete[] cycle;
-			}
-		}
+        delete[] cycle;
+      }
+    }
   }
 
-	// print single side
-	void
-	printSide(int sideNum)
+  // print single side
+  void
+  printSide(int sideNum)
   {
     unsigned index = 8 * sideNum + 4, printCount = 0;
     for (unsigned i = index - 4; i < index; ++i, ++printCount)
@@ -120,9 +120,9 @@ public:
     }
   }
 
-	// rotate single side given a move
-	void
-	rotateSide(int sideNum, bool prime)
+  // rotate single side given a move
+  void
+  rotateSide(int sideNum, bool prime)
   {
     piece_t cycleBuffer[CYCLE_LENGTH], cycle[CYCLE_LENGTH];
     for (auto& c : m_moveMap[MOVE_NAMES[sideNum]].cycles)
@@ -141,9 +141,9 @@ public:
     }
   }
 
-	// scramble the cube given a space seperated scramble string
-	void
-	scramble(const std::string& moveStr)
+  // scramble the cube given a space seperated scramble string
+  void
+  scramble(const std::string& moveStr)
   {
     std::vector<int> moves;
     std::stringstream tokenize(moveStr);
@@ -167,24 +167,24 @@ public:
     }
   }
 
-	bool
-	operator==(const Cube& other);
+  bool
+  operator==(const Cube& other);
 
 private:
-	// do one rotation of a side
-	void
-	rotateSideSingle(int sideNum);
+  // do one rotation of a side
+  void
+  rotateSideSingle(int sideNum);
 
-	// private constants
-	static const unsigned CUBE_ORDER       = 3;
-	static const unsigned SIDE_PIECE_COUNT = 8;
-	static const unsigned PIECE_COUNT      = 48;
+  // private constants
+  static const unsigned CUBE_ORDER       = 3;
+  static const unsigned SIDE_PIECE_COUNT = 8;
+  static const unsigned PIECE_COUNT      = 48;
   static const unsigned CYCLE_LENGTH     = 4;
   static constexpr char MOVE_NAMES[7]    = "ULFRBD";
 
   // member variables
-	piece_t m_cube[PIECE_COUNT];
-	std::unordered_map<char, move_t> m_moveMap;
+  piece_t m_cube[PIECE_COUNT];
+  std::unordered_map<char, move_t> m_moveMap;
 };
 
 #endif

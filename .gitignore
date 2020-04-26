@@ -1,5 +1,6 @@
 *.o
-*.txt
+notes.txt
 .autolab-asmt
 compile_commands.json
 driver
+.gdb_history

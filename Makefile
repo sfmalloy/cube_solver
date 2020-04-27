@@ -12,8 +12,8 @@
 CXX      = g++
 
 # C++ compiler flags
-CXXFLAGS := -std=c++17 -g -Wall -Werror -pthread
-# CXXFLAGS := -std=c++17 -O3 -Wall -Werror -pthread
+# CXXFLAGS := -std=c++17 -g -Wall -Werror -pthread
+CXXFLAGS := -std=c++17 -O3 -Wall -Werror -pthread
 
 #############################################################
 # Rules                                                     #

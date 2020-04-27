@@ -46,7 +46,7 @@ public:
   }
   
   // copy ctor
-  Cube(Cube& other)
+  Cube(const Cube& other)
   {
     initCycles();
     std::copy(std::begin(other.m_cube), std::end(other.m_cube), std::begin(m_cube));
@@ -152,7 +152,7 @@ public:
         exit(1);
       }
     }
-    else if (moveStr.size() == 1)
+    else if (moveStr.size() == 1 && m_moveMap.find(moveStr[0]) != m_moveMap.end())
       rotateSide(index, false);
     else
     {

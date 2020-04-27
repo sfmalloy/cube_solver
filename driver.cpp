@@ -7,10 +7,41 @@
 
 typedef std::vector<std::string> moveset_t;
 
-// FIXME
-// compiler error when pushing to std::queue
 struct CubeState
 {
+  // default ctor
+  CubeState()
+    : cube(),
+      solution()
+  { }
+  
+  CubeState(const Cube& c)
+    : cube(c),
+      solution()
+  { }
+  
+  CubeState(const Cube& c, const moveset_t& s)
+    : cube(c),
+      solution(s)
+  { }
+  
+  // copy ctor
+  CubeState(const CubeState& other)
+    : cube(other.cube),
+      solution(other.solution)
+  { }
+
+//  CubeState& operator=(CubeState const& other)
+//  {
+//    if (&other == this) 
+//      return *this;
+//    
+//    cube = other.cube;
+//    solution = other.solution;
+//    
+//    return *this;
+//  }
+  
   Cube cube;
   moveset_t solution;
 };
@@ -23,6 +54,9 @@ serialBFS(Cube c, const moveset_t& moves);
 
 CubeState
 serialBFS(std::queue<CubeState>& frontier, const moveset_t& moves);
+
+bool
+isLooping(const std::string& move, const moveset_t& solution);
 
 int
 main()
@@ -41,15 +75,12 @@ main()
 
   Cube c;
   c.scramble(scramble);
-  std::cout << std::boolalpha << "Solved?: " << c.isSolved() << '\n';
 
   moveset_t startingMoves = getStartMoves();
   CubeState solved = serialBFS(c, startingMoves);
 
   for (const auto& m : solved.solution)
-  {
     std::cout << m << ' ';
-  }
   std::cout << '\n';
 }
 
@@ -75,49 +106,57 @@ getStartMoves()
 CubeState
 serialBFS(Cube c, const moveset_t& moves)
 {
+  if (c.isSolved())
+    return CubeState();
   std::queue<CubeState> frontier;
   for (const auto& m : moves)
   {
-    Cube cCopy(c);
-    c.move(m);
-    
-    moveset_t solution;
-    solution.push_back(m);
-    
-    CubeState state;
-    state.cube = c;
-    state.solution = solution;
+    CubeState state(c);
+    state.cube.move(m);
+    state.solution.push_back(m);
+
     frontier.push(state);
   }
-  
+
   return serialBFS(frontier, moves);
 }
 
 CubeState
 serialBFS(std::queue<CubeState>& frontier, const moveset_t& moves)
 {
-  CubeState currState;
-  currState.cube = frontier.front().cube;
-  currState.solution = frontier.front().solution;
-  frontier.pop();
-
-  if (currState.cube.isSolved())
-    return currState;
+  if (frontier.front().cube.isSolved())
+    return frontier.front();
   
-  for (const auto& m : moves)
+  while (!frontier.front().cube.isSolved())
   {
-    if (m[0] != currState.solution.back()[0])
+    for (const auto& m : moves)
     {
-      CubeState currCopy;
-      currCopy.cube = currState.cube;
-      currCopy.solution = currState.solution;
+      if (!isLooping(m, frontier.front().solution))
+      {
+        CubeState temp(frontier.front());
+        temp.cube.move(m);
+        temp.solution.push_back(m);
 
-      currCopy.cube.move(m);
-      currCopy.solution.push_back(m);
-
-      frontier.push(currCopy);
+        frontier.push(temp);
+      }
     }
-  }
 
-  return serialBFS(frontier, moves);
+    frontier.pop();
+  }
+  
+  return frontier.front();
+}
+
+bool
+isLooping(const std::string& move, const moveset_t& solution)
+{
+  if (solution.size() < 3 || move[0] != solution.back()[0])
+    return false;
+  
+  size_t begin = solution.size() - 1, end = begin - 3;
+  bool looping = true;
+  for (size_t i = begin; i > end; --i)
+    looping &= solution[i][0] == solution[i - 1][0];
+
+  return looping;
 }

@@ -1,14 +1,11 @@
-// Paper that I'm using to get overall structure of the cube (not using
-// algorithms from it)
-// https://dl.acm.org/doi/abs/10.1145/29309.29316
+/*
+ * Sean Malloy
+ * 04/26/2020
+ * Cube.hpp
+ * 3x3x3 cube data structure represented as a 1D array of integers.
+ */
 
-// TODO
-// 2. Rotate face
-// 3. Scramble
-// 4. Operator '=='
-// ...
-// N. Comments
-
+#include <cstdlib>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -17,6 +14,7 @@
 #include <vector>
 #include <algorithm>
 #include <iterator>
+
 
 typedef int piece_t;
 typedef piece_t* moveCycle_t;
@@ -37,9 +35,13 @@ public:
   Cube()
   {
     for (unsigned i = 0; i < PIECE_COUNT; ++i)
-      m_cube[i] = i + 1;      
+      m_cube[i] = i + 1;
 
-    // initialize move cycle groups
+    std::string colors = "WOGRBY";
+    for (unsigned i = 0; i < SIDE_COUNT; ++i)
+      for (unsigned c = 0; c < SIDE_PIECE_COUNT; ++c)
+        m_colors.push_back(colors[i]);
+
     initCycles();
   }
   
@@ -97,6 +99,16 @@ public:
     }
   }
 
+  void
+  printCube()
+  {
+    for (unsigned i = 0; i < SIDE_COUNT; ++i)
+    {
+      printf("%c\n", MOVE_NAMES[i]);
+      printSide(i);
+    }
+  }
+
   // print single side
   void
   printSide(int sideNum)
@@ -104,23 +116,86 @@ public:
     unsigned index = 8 * sideNum + 4, printCount = 0;
     for (unsigned i = index - 4; i < index; ++i, ++printCount)
     {
-      printf("%2d ", m_cube[i]);
+      printf("%2c ", m_colors[m_cube[i] - 1]);
       if (printCount % 3 == 2)
         std::cout << '\n';
     }
 
-    printf("%2c ", MOVE_NAMES[sideNum]);
+    printf("%2c ", m_colors[sideNum * 8]);
     ++printCount;
 
     for (unsigned i = index; i < index + 4; ++i, ++printCount)
     {
-      printf("%2d ", m_cube[i]);
+      printf("%2c ", m_colors[m_cube[i] - 1]);
       if (printCount % 3 == 2)
         std::cout << '\n';
     }
   }
 
   // rotate single side given a move
+  void
+  move(const std::string& moveStr)
+  {
+    unsigned index = m_moveMap[moveStr[0]].index;
+    if (moveStr.size() == 2)
+    {
+      if (moveStr[1] == '\'')
+        rotateSide(index, true);
+      else if (moveStr[1] == '2')
+      {
+        rotateSide(index, false);
+        rotateSide(index, false);
+      }
+      else
+      {
+        fprintf(stderr, "Invalid move (%s), exiting\n", moveStr.c_str());
+        exit(1);
+      }
+    }
+    else if (moveStr.size() == 1)
+      rotateSide(index, false);
+    else
+    {
+      fprintf(stderr, "Invalid move (%s), exiting\n", moveStr.c_str());
+      exit(1);
+    }
+  }
+
+  // scramble the cube given a space seperated scramble string
+  void
+  scramble(const std::string& moveStr)
+  {
+    std::stringstream tokenize(moveStr);
+    std::string token;
+
+    while (std::getline(tokenize, token, ' '))
+      move(token);
+  }
+
+  bool
+  isSolved()
+  {
+    for (unsigned i = 0; i < PIECE_COUNT; ++i)
+      if ((int) i + 1 != m_cube[i])
+        return false;
+
+    return true;
+  }
+
+  bool
+  operator==(const Cube& other)
+  {
+    for (unsigned i = 0; i < PIECE_COUNT; ++i)
+      if (other.m_cube[i] != m_cube[i])
+        return false;
+
+    return true;
+  }
+
+private:
+  
+  // rotate side one time
+  // if prime is true, rotate counter-clockwise
   void
   rotateSide(int sideNum, bool prime)
   {
@@ -140,43 +215,9 @@ public:
         m_cube[cycle[i]] = cycleBuffer[i];
     }
   }
-
-  // scramble the cube given a space seperated scramble string
-  void
-  scramble(const std::string& moveStr)
-  {
-    std::vector<int> moves;
-    std::stringstream tokenize(moveStr);
-    std::string token;
-
-    while (std::getline(tokenize, token, ' '))
-    {
-      unsigned index = m_moveMap[token[0]].index;
-      if (token.size() > 1)
-      {
-        if (token[1] == '\'')
-          rotateSide(index, true);
-        else
-        {
-          rotateSide(index, false);
-          rotateSide(index, false);
-        }
-      }
-      else
-        rotateSide(index, false);
-    }
-  }
-
-  bool
-  operator==(const Cube& other);
-
-private:
-  // do one rotation of a side
-  void
-  rotateSideSingle(int sideNum);
-
   // private constants
   static const unsigned CUBE_ORDER       = 3;
+  static const unsigned SIDE_COUNT       = 6;
   static const unsigned SIDE_PIECE_COUNT = 8;
   static const unsigned PIECE_COUNT      = 48;
   static const unsigned CYCLE_LENGTH     = 4;
@@ -185,6 +226,7 @@ private:
   // member variables
   piece_t m_cube[PIECE_COUNT];
   std::unordered_map<char, move_t> m_moveMap;
+  std::string m_colors;
 };
 
 #endif

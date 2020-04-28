@@ -9,7 +9,7 @@
 #############################################################
 
 # C++ compiler
-CXX      = g++
+CXX      := g++
 
 # C++ compiler flags
 # CXXFLAGS := -std=c++17 -g -Wall -Werror -pthread
@@ -22,9 +22,12 @@ CXXFLAGS := -std=c++17 -O3 -Wall -Werror -pthread
 driver : driver.cpp 
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
+test : test.cpp
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
 #############################################################
 
-.PHONY: driver
+.PHONY: driver test
 
 clean :
 	@$(RM) driver

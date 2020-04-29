@@ -49,7 +49,16 @@ public:
   // copy ctor
   Cube(const Cube& other)
   {
-    std::copy(std::begin(other.m_cube), std::end(other.m_cube), std::begin(m_cube));
+    for (unsigned i = 0; i < PIECE_COUNT; ++i)
+      m_cube[i] = other.m_cube[i];
+    
+    for (unsigned i = 0; i < SIDE_COUNT; ++i)
+      m_moveMap[MOVE_NAMES[i]] = i;
+    
+    std::string colors = "WOGRBY";
+    for (unsigned i = 0; i < SIDE_COUNT; ++i)
+      for (unsigned c = 0; c < SIDE_PIECE_COUNT; ++c)
+        m_colors.push_back(colors[i]);
   }
 
   void
@@ -144,7 +153,13 @@ public:
 
     return true;
   }
-  
+
+  std::string
+  getFaceNames()
+  {
+    return MOVE_NAMES;
+  }
+
   char
   oppositeFace(const std::string& move)
   {

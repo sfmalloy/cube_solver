@@ -4,3 +4,7 @@ notes.txt
 compile_commands.json
 driver
 .gdb_history
+oldDriver.cpp
+oldDriver
+test.cpp
+test

@@ -98,6 +98,12 @@ public:
   void
   move(const std::string& moveStr)
   {
+    if (m_moveMap.find(moveStr[0]) == m_moveMap.end())
+    {
+      fprintf(stderr, "Invalid move (%s), exiting\n", moveStr.c_str());
+      exit(1);
+    }
+ 
     unsigned index = m_moveMap[moveStr[0]];
     if (moveStr.size() == 2)
     {
@@ -116,11 +122,6 @@ public:
     }
     else if (moveStr.size() == 1 && m_moveMap.find(moveStr[0]) != m_moveMap.end())
       rotateSide(index, false);
-    else
-    {
-      fprintf(stderr, "Invalid move (%s), exiting\n", moveStr.c_str());
-      exit(1);
-    }
   }
 
   // scramble the cube given a space seperated scramble string
@@ -161,9 +162,9 @@ public:
   }
 
   char
-  oppositeFace(const std::string& move)
+  oppositeFace(const char& face)
   {
-    return OPP_MOVE_NAMES[m_moveMap[move[0]]];
+    return OPP_MOVE_NAMES[m_moveMap[face]];
   }
 
 private:

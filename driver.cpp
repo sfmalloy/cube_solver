@@ -10,6 +10,7 @@
 #include <vector>
 #include <queue>
 #include <unistd.h>
+
 /************************************************/
 // Local includes
 #include "Cube.hpp"
@@ -18,6 +19,7 @@
 /************************************************/
 // Constants
 const unsigned FACE_COUNT = 6;
+const char MOVE_NAMES[7]  = "ULFRBD";
 
 /************************************************/
 // Typedefs/structs
@@ -56,6 +58,12 @@ serialBFS(Cube cube);
 
 moveset_t
 serialHelper(serialFrontier_t& frontier, const moveset_t& moves);
+
+bool
+uniqueMoves(const char& face, const moveset_t& solution);
+
+char
+oppositeFace(const char& face);
 /************************************************/
 
 int
@@ -127,6 +135,8 @@ serialBFS(Cube cube)
   return serialHelper(frontier, initMoves);
 }
 
+/************************************************/
+
 moveset_t
 serialHelper(serialFrontier_t& frontier, const moveset_t& moves)
 {
@@ -134,7 +144,7 @@ serialHelper(serialFrontier_t& frontier, const moveset_t& moves)
   {
     for (const auto& move : moves)
     {
-      if (move[0] != frontier.front().solution.back()[0])
+      if (uniqueMoves(move[0], frontier.front().solution))
       {
         CubeState copyState(frontier.front());
         copyState.cube.move(move);
@@ -148,4 +158,37 @@ serialHelper(serialFrontier_t& frontier, const moveset_t& moves)
   }
 
   return frontier.front().solution;
+}
+
+bool
+uniqueMoves(const char& face, const moveset_t& solution)
+{
+  if (face == solution.back()[0])
+    return false;
+
+  if (solution.size() >= 3 && face == solution[solution.size() - 3][0] && 
+      solution[solution.size() - 2][0] == oppositeFace(face))
+    return false;
+
+  return true;
+}
+
+char
+oppositeFace(const char& face)
+{
+  switch (face)
+  {
+    case 'U':
+      return 'D';
+    case 'D':
+      return 'U';
+    case 'R':
+      return 'L';
+    case 'L':
+      return 'R';
+    case 'F':
+      return 'B';
+    default:
+      return 'F';
+  }
 }

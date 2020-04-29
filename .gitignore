@@ -1,5 +1,5 @@
 *.o
-notes.txt
+*.txt
 .autolab-asmt
 compile_commands.json
 driver

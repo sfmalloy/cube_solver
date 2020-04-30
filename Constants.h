@@ -1,6 +1,16 @@
 #ifndef CYCLES_H
 #define CYCLES_H
 
+const unsigned CUBE_ORDER        = 3;
+const unsigned SIDE_COUNT        = 6;
+const unsigned SIDE_PIECE_COUNT  = 8;
+const unsigned PIECE_COUNT       = 48;
+const unsigned CYCLE_LENGTH      = 4;
+const unsigned CYCLE_COUNT       = 5;
+constexpr char MOVE_NAMES[7]     = "ULFRBD";
+constexpr char OPP_MOVE_NAMES[7] = "DRBLFU";
+constexpr char COLOR_NAMES[7]    = "WOGRBY";
+
 const int MOVE_CYCLES[6][5][4]
 { 
   { {  0,  2,  7,  5 }, {  1,  4,  6,  3 }, {  8, 32, 24, 16 }, {  9, 33, 25, 17 }, { 10, 34, 26, 18 } },

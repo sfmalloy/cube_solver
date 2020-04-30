@@ -18,11 +18,6 @@
 #include "Timer.hpp"
 
 /************************************************/
-// Constants and globals
-const unsigned FACE_COUNT = 6;
-const char MOVE_NAMES[7]  = "ULFRBD";
-
-/************************************************/
 // Typedefs/structs
 typedef std::vector<std::string> moveset_t;
 
@@ -43,11 +38,24 @@ struct CubeState
       solution(state.solution)
   { }
 
+  bool
+  operator<(const CubeState& state)
+  {
+    return cube < state.cube;
+  }
+
+  bool
+  operator<(const CubeState& state) const
+  {
+    return cube < state.cube;
+  }
+  
   Cube cube;
   moveset_t solution;
 };
 
-typedef std::queue<CubeState> frontier_t;
+typedef std::queue<CubeState> frontierBFS_t;
+typedef std::priority_queue<CubeState> frontierAStar_t;
 
 /************************************************/
 // Forward declarations
@@ -58,7 +66,7 @@ moveset_t
 serialBFS(Cube cube);
 
 moveset_t
-serialHelper(frontier_t& frontier, const moveset_t& moves);
+serialBFSHelper(frontierBFS_t& frontier, const moveset_t& moves);
 
 bool
 uniqueMoves(const char face, const moveset_t& solution);
@@ -70,10 +78,16 @@ moveset_t
 parallelBFS(Cube& cube, unsigned p);
 
 CubeState
-parallelHelper(frontier_t frontier, const moveset_t& moves, bool& finished, std::mutex& lock);
+parallelBFSHelper(frontierBFS_t frontier, const moveset_t& moves, bool& finished, std::mutex& lock);
 
 unsigned
 partitionStart(const unsigned p, const unsigned tid);
+
+moveset_t
+serialAStar(Cube& cube);
+
+moveset_t
+serialAStarHelper(frontierAStar_t& frontier, const moveset_t& moves);
 /************************************************/
 
 int
@@ -87,6 +101,10 @@ main()
   std::string version;
   std::cin >> version;
 
+  std::cout << "Algorithm (bfs/astar) => ";
+  std::string algorithm;
+  std::cin >> algorithm;
+
   Cube cube;
   cube.scramble(scramble);
   
@@ -95,9 +113,18 @@ main()
   unsigned p;
   if (version == "s")
   {
-    t.start();
-    solution = serialBFS(cube);
-    t.stop();
+    if (algorithm == "bfs")
+    {
+      t.start();
+      solution = serialBFS(cube);
+      t.stop();
+    }
+    else
+    {
+      t.start();
+      solution = serialAStar(cube);
+      t.stop();
+    }
   }
   else
   {
@@ -147,7 +174,7 @@ serialBFS(Cube cube)
     return moveset_t();
 
   moveset_t initMoves = getStartMoves(cube.getFaceNames());
-  frontier_t frontier;
+  frontierBFS_t frontier;
 
   for (const auto& move : initMoves)
   {
@@ -158,13 +185,13 @@ serialBFS(Cube cube)
     frontier.push(state);
   }
 
-  return serialHelper(frontier, initMoves);
+  return serialBFSHelper(frontier, initMoves);
 }
 
 /************************************************/
 
 moveset_t
-serialHelper(frontier_t& frontier, const moveset_t& moves)
+serialBFSHelper(frontierBFS_t& frontier, const moveset_t& moves)
 {
   while (!frontier.front().cube.isSolved())
   {
@@ -186,6 +213,8 @@ serialHelper(frontier_t& frontier, const moveset_t& moves)
   return frontier.front().solution;
 }
 
+/************************************************/
+
 moveset_t
 parallelBFS(Cube& cube, unsigned p)
 {
@@ -196,7 +225,7 @@ parallelBFS(Cube& cube, unsigned p)
   std::vector<std::future<CubeState>> threads;
   for (unsigned tid = 0; tid < p; ++tid)
   {
-    frontier_t frontier;
+    frontierBFS_t frontier;
     for (unsigned m = partitionStart(p, tid); m < partitionStart(p, tid + 1); ++m)
     {
       CubeState state(cube);
@@ -206,7 +235,7 @@ parallelBFS(Cube& cube, unsigned p)
       frontier.push(state);
     }
 
-    threads.push_back(std::async(std::launch::async, parallelHelper, 
+    threads.push_back(std::async(std::launch::async, parallelBFSHelper, 
           frontier, std::cref(initMoves), std::ref(finished), std::ref(lock)));
   }
 
@@ -224,7 +253,7 @@ parallelBFS(Cube& cube, unsigned p)
 /************************************************/
 
 CubeState
-parallelHelper(frontier_t frontier, const moveset_t& moves, bool& finished, std::mutex& lock)
+parallelBFSHelper(frontierBFS_t frontier, const moveset_t& moves, bool& finished, std::mutex& lock)
 {
   while (true)
   {
@@ -256,6 +285,57 @@ parallelHelper(frontier_t frontier, const moveset_t& moves, bool& finished, std:
 
   return frontier.front();
 }
+
+/************************************************/
+
+moveset_t
+serialAStar(Cube& cube)
+{
+  if (cube.isSolved())
+    return moveset_t();
+
+  moveset_t initMoves = getStartMoves(cube.getFaceNames());
+  frontierAStar_t frontier;
+
+  for (const auto& move : initMoves)
+  {
+    CubeState state(cube);
+    state.cube.move(move);
+    state.solution.push_back(move);
+
+    frontier.push(state);
+  }
+
+  return serialAStarHelper(frontier, initMoves);
+}
+
+/************************************************/
+
+moveset_t
+serialAStarHelper(frontierAStar_t& frontier, const moveset_t& moves)
+{
+  while (!frontier.top().cube.isSolved())
+  {
+    std::cout << frontier.top().cube.distanceToSolved() << '\n';
+    for (const auto& move : moves)
+    {
+      if (uniqueMoves(move[0], frontier.top().solution))
+      {
+        CubeState copyState(frontier.top());
+        copyState.cube.move(move);
+        copyState.solution.push_back(move);
+
+        frontier.push(copyState);
+      }
+    }
+    
+    frontier.pop();
+  }
+
+  return frontier.top().solution;
+}
+
+/************************************************/
 
 bool
 uniqueMoves(const char face, const moveset_t& solution)
@@ -291,6 +371,8 @@ oppositeFace(const char face)
       return 'F';
   }
 }
+
+/************************************************/
 
 unsigned
 partitionStart(const unsigned p, const unsigned tid)

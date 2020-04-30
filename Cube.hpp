@@ -5,28 +5,28 @@
  * 3x3x3 cube data structure represented as a 1D array of integers.
  */
 
+/* SOURCES
+ *
+ * [1] - https://dl.acm.org/doi/abs/10.1145/29309.29316
+ * [2] - https://www.cs.princeton.edu/courses/archive/fall06/cos402/papers/korfrubik.pdf
+ *
+ */
+
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <unordered_map>
-#include <vector>
-#include <algorithm>
 #include <iterator>
+#include <cmath>
 
-#include "Cycles.h"
+#include "Constants.h"
 
 typedef int piece_t;
 
 #ifndef CUBE_HPP
 #define CUBE_HPP
-
-struct move_t
-{
-  unsigned index;
-  std::vector<piece_t[4]> cycles;
-};
 
 class Cube
 {
@@ -40,10 +40,9 @@ public:
     for (unsigned i = 0; i < SIDE_COUNT; ++i)
       m_moveMap[MOVE_NAMES[i]] = i;
 
-    std::string colors = "WOGRBY";
     for (unsigned i = 0; i < SIDE_COUNT; ++i)
       for (unsigned c = 0; c < SIDE_PIECE_COUNT; ++c)
-        m_colors.push_back(colors[i]);
+        m_colors.push_back(COLOR_NAMES[i]);
   }
   
   // copy ctor
@@ -55,10 +54,9 @@ public:
     for (unsigned i = 0; i < SIDE_COUNT; ++i)
       m_moveMap[MOVE_NAMES[i]] = i;
     
-    std::string colors = "WOGRBY";
     for (unsigned i = 0; i < SIDE_COUNT; ++i)
       for (unsigned c = 0; c < SIDE_PIECE_COUNT; ++c)
-        m_colors.push_back(colors[i]);
+        m_colors.push_back(COLOR_NAMES[i]);
   }
 
   void
@@ -146,15 +144,15 @@ public:
   }
 
   bool
-  operator==(const Cube& other)
+  isSolved() const
   {
     for (unsigned i = 0; i < PIECE_COUNT; ++i)
-      if (other.m_cube[i] != m_cube[i])
+      if ((piece_t) i != m_cube[i])
         return false;
 
     return true;
   }
-
+  
   std::string
   getFaceNames()
   {
@@ -165,6 +163,51 @@ public:
   oppositeFace(const char& face)
   {
     return OPP_MOVE_NAMES[m_moveMap[face]];
+  }
+
+  // See source 2 for heuristic explaination
+  int
+  distanceToSolved()
+  {
+    int maxDist = 0;
+    for (int i = 0; i < (int) PIECE_COUNT; i += 8)
+    {
+      int dist = 0;
+      dist += abs(m_cube[i + 1] - (i + 1));
+      dist += abs(m_cube[i + 3] - (i + 3));
+      dist += abs(m_cube[i + 4] - (i + 4));
+      dist += abs(m_cube[i + 6] - (i + 6));
+
+      maxDist = std::max(dist, maxDist);
+    }
+
+    return maxDist / 4;
+  }
+  
+  // See source 2 for heuristic explaination
+  int
+  distanceToSolved() const
+  {
+    int maxDist = 0;
+    for (int i = 0; i < (int) PIECE_COUNT; i += 8)
+    {
+      int dist = 0;
+
+      dist += abs(m_cube[i + 1] - (i + 1));
+      dist += abs(m_cube[i + 3] - (i + 3));
+      dist += abs(m_cube[i + 4] - (i + 4));
+      dist += abs(m_cube[i + 6] - (i + 6));
+
+      maxDist = std::max(dist, maxDist);
+    }
+
+    return maxDist / 4;
+  }
+  
+  bool
+  operator<(const Cube& other) const
+  {
+    return distanceToSolved() < other.distanceToSolved();
   }
 
 private:
@@ -196,17 +239,6 @@ private:
         m_cube[cycle[j]] = buffer[j];
     }
   }
-
-  // private constants
-  static const unsigned CUBE_ORDER        = 3;
-  static const unsigned SIDE_COUNT        = 6;
-  static const unsigned SIDE_PIECE_COUNT  = 8;
-  static const unsigned PIECE_COUNT       = 48;
-  static const unsigned CYCLE_LENGTH      = 4;
-  static const unsigned CYCLE_COUNT       = 5;
-  static constexpr char MOVE_NAMES[7]     = "ULFRBD";
-  static constexpr char OPP_MOVE_NAMES[7] = "DRBLFU";
-  
 
   // member variables
   piece_t m_cube[PIECE_COUNT];

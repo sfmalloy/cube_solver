@@ -7,6 +7,7 @@ const unsigned SIDE_PIECE_COUNT  = 8;
 const unsigned PIECE_COUNT       = 48;
 const unsigned CYCLE_LENGTH      = 4;
 const unsigned CYCLE_COUNT       = 5;
+const unsigned START_MOVE_COUNT  = 18;
 constexpr char MOVE_NAMES[7]     = "ULFRBD";
 constexpr char OPP_MOVE_NAMES[7] = "DRBLFU";
 constexpr char COLOR_NAMES[7]    = "WOGRBY";

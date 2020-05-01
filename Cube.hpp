@@ -6,12 +6,20 @@
  */
 
 /* SOURCES
- *
  * [1] - https://dl.acm.org/doi/abs/10.1145/29309.29316
  * [2] - https://www.cs.princeton.edu/courses/archive/fall06/cos402/papers/korfrubik.pdf
  *
+ * [1] was used as inspiration for how I represented the cube in the end,
+ * however I grouped numbers by face, unlike the paper which grouped three
+ * faces together when numbering.
+ *
+ * [2] was used as inspiration for the heuristic, which I did not follow
+ * exactly. Instead I counted number of incorrect pieces rather than manhattan
+ * distances, but still divided by 4 as to not overestimate.
  */
 
+/************************************************/
+// System includes
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
@@ -21,12 +29,19 @@
 #include <iterator>
 #include <cmath>
 
+/************************************************/
+// Local includes
 #include "Constants.h"
+
+/************************************************/
+// Typedefs/Macros
 
 typedef int piece_t;
 
 #ifndef CUBE_HPP
 #define CUBE_HPP
+
+/************************************************/
 
 class Cube
 {
@@ -58,7 +73,8 @@ public:
       for (unsigned c = 0; c < SIDE_PIECE_COUNT; ++c)
         m_colors.push_back(COLOR_NAMES[i]);
   }
-
+  
+  // Prints all 6 sides of cube including face names
   void
   printCube()
   {
@@ -69,41 +85,9 @@ public:
     }
   }
 
-  void
-  printCube() const
-  {
-    for (unsigned i = 0; i < SIDE_COUNT; ++i)
-    {
-      printf("%c\n", MOVE_NAMES[i]);
-      printSide(i);
-    }
-  }
-  
   // print single side
   void
   printSide(int sideNum)
-  {
-    unsigned index = 8 * sideNum + 4, printCount = 0;
-    for (unsigned i = index - 4; i < index; ++i, ++printCount)
-    {
-      printf("%2c ", m_colors[m_cube[i]]);
-      if (printCount % 3 == 2)
-        std::cout << '\n';
-    }
-
-    printf("%2c ", m_colors[sideNum * 8]);
-    ++printCount;
-
-    for (unsigned i = index; i < index + 4; ++i, ++printCount)
-    {
-      printf("%2c ", m_colors[m_cube[i]]);
-      if (printCount % 3 == 2)
-        std::cout << '\n';
-    }
-  }
-  
-  void
-  printSide(int sideNum) const
   {
     unsigned index = 8 * sideNum + 4, printCount = 0;
     for (unsigned i = index - 4; i < index; ++i, ++printCount)
@@ -261,8 +245,8 @@ public:
   }
 
 private:
-  // rotate side one time
-  // if prime is true, rotate counter-clockwise
+  // Rotate single side 90 degrees
+  // If prime is true, rotate counter-clockwise 90 degrees, otherwise clockwise
   void
   rotateSide(int sideNum, bool prime)
   {

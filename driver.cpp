@@ -15,6 +15,7 @@
 /************************************************/
 // Local includes
 #include "Cube.hpp"
+#include "Constants.h"
 #include "Timer.hpp"
 
 /************************************************/
@@ -66,41 +67,75 @@ typedef std::priority_queue<CubeState> frontierAStar_t;
 
 /************************************************/
 // Forward declarations
+
+// Returns strings representing all start moves based on face names.
 moveset_t
 getStartMoves(const std::string& faceNames);
 
+// Serial Breadth-First Search. First level is populated with every possible
+// starting move. Each vertex is one CubeState struct instance with a copy of
+// cube and a solution vector.
 moveset_t
-serialBFS(Cube cube);
+serialBFS(Cube& cube);
 
+// Serial Breadth-First search helper that searches all nodes after the inital
+// starting moves. Only adds states to the frontier if the moves don't show
+// they are looping infinitely, saving space. Returns once solution is at front
+// of the queue.
 moveset_t
 serialBFSHelper(frontierBFS_t& frontier, const moveset_t& moves);
 
+// Parallel Breadth-First Search using std::future. First level is populated
+// with every possible starting move, and partitioned to 'p' threads. Those
+// threads then search their section of the graph until a solution is found by
+// one of the threads. That solution is returned and all other states are
+// ignored.
 moveset_t
 parallelBFS(Cube& cube, unsigned p);
 
+// Parallel Breadth-First search helper where each node searches their section
+// of the graph. Only adds states to the frontier if the moves don't show they
+// are looping infinitely, saving space. Returns once one thread finishes (i.e.
+// solution is at front of local frontier), indicated by the shared bool 'finished'.
 CubeState
 parallelBFSHelper(frontierBFS_t frontier, const moveset_t& moves, bool& finished, std::mutex& lock);
 
+// Serial A* search, adapted from BFS.
 moveset_t
 serialAStar(Cube& cube);
 
+// Serial A* search helper, adapted from BFS that uses a std::priority_queue instead
+// of a std::queue and returns as soon as a solution is found rather than
+// waiting for it to be at the top of the queue. Uses heuristic of
+// (# wrong corner stickers / 4) + (# wrong edge stickers / 4). See source 2 in
+// Cube.hpp for similar heuristic.
 moveset_t
 serialAStarHelper(frontierAStar_t& frontier, const moveset_t& moves);
 
+// Parallel A* search, adapted from BFS.
 moveset_t
 parallelAStar(Cube& cube, unsigned p);
 
+// Parallel A* search helper, adapted from BFS that uses a std::priority_queue instead
+// of a std::queue and returns as soon as a solution is found rather than
+// waiting for it to be at the top of the queue. Uses heuristic 
+// (# wrong corner stickers / 4) + (# wrong edge stickers / 4). See source 2 in Cube.hpp 
+// for similar heuristic. Notifies other threads of finishing using shared bool 'finished'.
 CubeState
 parallelAStarHelper(frontierAStar_t frontier, const moveset_t& moves, bool& finished, std::mutex& lock);
 
-unsigned
-partitionStart(const unsigned p, const unsigned tid);
-
+// Returns true if same move is not being done more than once in a row, or when
+// opposite face is moved before it.
 bool
 uniqueMoves(const char face, const moveset_t& solution);
 
+// Returns letter representing opposite face of 'face'
 char
 oppositeFace(const char face);
+
+// Partition calculation used for chunking starting move vector.
+unsigned
+partitionStart(const unsigned p, const unsigned tid);
 /************************************************/
 
 int
@@ -169,6 +204,7 @@ main()
 
 /************************************************/
 
+// Returns strings representing all start moves based on face names.
 moveset_t
 getStartMoves(const std::string& faceNames)
 {
@@ -190,13 +226,16 @@ getStartMoves(const std::string& faceNames)
 
 /************************************************/
 
+// Serial Breadth-First Search. First level is populated with every possible
+// starting move. Each vertex is one CubeState struct instance with a copy of
+// cube and a solution vector.
 moveset_t
-serialBFS(Cube cube)
+serialBFS(Cube& cube)
 {
   if (cube.isSolved())
     return moveset_t();
 
-  moveset_t initMoves = getStartMoves(cube.getFaceNames());
+  moveset_t initMoves = getStartMoves(MOVE_NAMES);
   frontierBFS_t frontier;
 
   for (const auto& move : initMoves)
@@ -213,6 +252,10 @@ serialBFS(Cube cube)
 
 /************************************************/
 
+// Serial Breadth-First search helper that searches all nodes after the inital
+// starting moves. Only adds states to the frontier if the moves don't show
+// they are looping infinitely, saving space. Returns once solution is at front
+// of the queue.
 moveset_t
 serialBFSHelper(frontierBFS_t& frontier, const moveset_t& moves)
 {
@@ -238,6 +281,11 @@ serialBFSHelper(frontierBFS_t& frontier, const moveset_t& moves)
 
 /************************************************/
 
+// Parallel Breadth-First Search using std::future. First level is populated
+// with every possible starting move, and partitioned to 'p' threads. Those
+// threads then search their section of the graph until a solution is found by
+// one of the threads. That solution is returned and all other states are
+// ignored.
 moveset_t
 parallelBFS(Cube& cube, unsigned p)
 {
@@ -278,6 +326,10 @@ parallelBFS(Cube& cube, unsigned p)
 }
 /************************************************/
 
+// Parallel Breadth-First search helper where each node searches their section
+// of the graph. Only adds states to the frontier if the moves don't show they
+// are looping infinitely, saving space. Returns once one thread finishes (i.e.
+// solution is at front of local frontier), indicated by the shared bool 'finished'.
 CubeState
 parallelBFSHelper(frontierBFS_t frontier, const moveset_t& moves, bool& finished, std::mutex& lock)
 {
@@ -465,21 +517,18 @@ parallelAStarHelper(frontierAStar_t frontier, const moveset_t& moves, bool& fini
 }
 /************************************************/
 
+// Returns true if same move is not being done more than once in a row, or when
+// opposite face is moved before it.
 bool
 uniqueMoves(const char face, const moveset_t& solution)
 {
-  if (face == solution.back()[0])
-    return false;
-
-  if (solution.size() >= 3 && face == solution[solution.size() - 3][0] && 
-      solution[solution.size() - 2][0] == oppositeFace(face))
-    return false;
-
-  return true;
+  return (face != solution.back()[0] && !(solution.size() >= 3 && face == solution[solution.size() - 3][0] && 
+      solution[solution.size() - 2][0] == oppositeFace(face)));
 }
 
 /************************************************/
 
+// Returns letter representing opposite face of 'face'
 char
 oppositeFace(const char face)
 {
@@ -502,8 +551,9 @@ oppositeFace(const char face)
 
 /************************************************/
 
+// Partition calculation used for chunking starting move vector.
 unsigned
 partitionStart(const unsigned p, const unsigned tid)
 {
-  return 18 * tid / p;
+  return START_MOVE_COUNT * tid / p;
 }

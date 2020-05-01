@@ -69,9 +69,41 @@ public:
     }
   }
 
+  void
+  printCube() const
+  {
+    for (unsigned i = 0; i < SIDE_COUNT; ++i)
+    {
+      printf("%c\n", MOVE_NAMES[i]);
+      printSide(i);
+    }
+  }
+  
   // print single side
   void
   printSide(int sideNum)
+  {
+    unsigned index = 8 * sideNum + 4, printCount = 0;
+    for (unsigned i = index - 4; i < index; ++i, ++printCount)
+    {
+      printf("%2c ", m_colors[m_cube[i]]);
+      if (printCount % 3 == 2)
+        std::cout << '\n';
+    }
+
+    printf("%2c ", m_colors[sideNum * 8]);
+    ++printCount;
+
+    for (unsigned i = index; i < index + 4; ++i, ++printCount)
+    {
+      printf("%2c ", m_colors[m_cube[i]]);
+      if (printCount % 3 == 2)
+        std::cout << '\n';
+    }
+  }
+  
+  void
+  printSide(int sideNum) const
   {
     unsigned index = 8 * sideNum + 4, printCount = 0;
     for (unsigned i = index - 4; i < index; ++i, ++printCount)
@@ -169,41 +201,59 @@ public:
   int
   distanceToSolved()
   {
-    int maxDist = 0;
-    for (int i = 0; i < (int) PIECE_COUNT; i += 8)
+    int numWrongEdges = 0;
+    int numWrongCorners = 0;
+    
+    piece_t cornerOffsets[4] = { 0, 2, 5, 7 };
+    piece_t edgeOffsets[4] = { 1, 3, 4, 6 };
+    
+    for (unsigned i = 0; i < PIECE_COUNT; i += 8)
     {
-      int dist = 0;
-      dist += abs(m_cube[i + 1] - (i + 1));
-      dist += abs(m_cube[i + 3] - (i + 3));
-      dist += abs(m_cube[i + 4] - (i + 4));
-      dist += abs(m_cube[i + 6] - (i + 6));
-
-      maxDist = std::max(dist, maxDist);
+      // Corners
+      for (unsigned c = 0; c < 4; ++c)
+        if (m_cube[i + cornerOffsets[c]] != cornerOffsets[c])
+          ++numWrongCorners;
+      
+      // Edges
+      for (unsigned e = 0; e < 4; ++e)
+        if (m_cube[i + edgeOffsets[e]] != edgeOffsets[e])
+          ++numWrongEdges;
     }
 
-    return maxDist / 4;
+    return (numWrongEdges / 4) + (numWrongCorners / 4);
   }
   
   // See source 2 for heuristic explaination
   int
   distanceToSolved() const
   {
-    int maxDist = 0;
-    for (int i = 0; i < (int) PIECE_COUNT; i += 8)
+    int numWrongEdges = 0;
+    int numWrongCorners = 0;
+    
+    piece_t cornerOffsets[4] = { 0, 2, 5, 7 };
+    piece_t edgeOffsets[4] = { 1, 3, 4, 6 };
+    for (unsigned i = 0; i < PIECE_COUNT; i += 8)
     {
-      int dist = 0;
-
-      dist += abs(m_cube[i + 1] - (i + 1));
-      dist += abs(m_cube[i + 3] - (i + 3));
-      dist += abs(m_cube[i + 4] - (i + 4));
-      dist += abs(m_cube[i + 6] - (i + 6));
-
-      maxDist = std::max(dist, maxDist);
+      // Corners
+      for (unsigned c = 0; c < 4; ++c)
+        if (m_cube[i + cornerOffsets[c]] != cornerOffsets[c])
+          ++numWrongCorners;
+      
+      // Edges
+      for (unsigned e = 0; e < 4; ++e)
+        if (m_cube[i + edgeOffsets[e]] != edgeOffsets[e])
+          ++numWrongEdges;
     }
 
-    return maxDist / 4;
+    return (numWrongEdges / 4) + (numWrongCorners / 4);
   }
   
+  bool
+  operator<(const Cube& other)
+  {
+    return distanceToSolved() < other.distanceToSolved();
+  }
+ 
   bool
   operator<(const Cube& other) const
   {
@@ -216,11 +266,9 @@ private:
   void
   rotateSide(int sideNum, bool prime)
   {
-    auto cycles = MOVE_CYCLES[sideNum];
-    
     for (unsigned i = 0; i < CYCLE_COUNT; ++i)
     {
-      auto cycle = cycles[i];
+      auto cycle = MOVE_CYCLES[sideNum][i];
       piece_t buffer[CYCLE_LENGTH];
 
       if (prime)
@@ -231,6 +279,7 @@ private:
 
         cycle = revCycle;
       }
+
       for (unsigned j = 1; j < CYCLE_LENGTH; ++j)
         buffer[j] = m_cube[cycle[j - 1]];
       buffer[0] = m_cube[cycle[CYCLE_LENGTH - 1]];

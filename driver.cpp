@@ -80,8 +80,8 @@ serialBFS(Cube& cube);
 
 // Serial Breadth-First search helper that searches all nodes after the inital
 // starting moves. Only adds states to the frontier if the moves don't show
-// they are looping infinitely, saving space. Returns once solution is at front
-// of the queue.
+// they are looping infinitely, saving space. Returns first solution that is
+// found.
 moveset_t
 serialBFSHelper(frontierBFS_t& frontier, const moveset_t& moves);
 
@@ -106,21 +106,17 @@ serialAStar(Cube& cube);
 
 // Serial A* search helper, adapted from BFS that uses a std::priority_queue instead
 // of a std::queue and returns as soon as a solution is found rather than
-// waiting for it to be at the top of the queue. Uses heuristic of
-// (# wrong corner stickers / 4) + (# wrong edge stickers / 4). See source 2 in
-// Cube.hpp for similar heuristic.
+// waiting for it to be at the top of the queue. Check Cube.hpp for heuristic.
 moveset_t
 serialAStarHelper(frontierAStar_t& frontier, const moveset_t& moves);
 
-// Parallel A* search, adapted from BFS.
+// Parallel A* search, adapted from parallel BFS.
 moveset_t
 parallelAStar(Cube& cube, unsigned p);
 
 // Parallel A* search helper, adapted from BFS that uses a std::priority_queue instead
 // of a std::queue and returns as soon as a solution is found rather than
-// waiting for it to be at the top of the queue. Uses heuristic 
-// (# wrong corner stickers / 4) + (# wrong edge stickers / 4). See source 2 in Cube.hpp 
-// for similar heuristic. Notifies other threads of finishing using shared bool 'finished'.
+// waiting for it to be at the top of the queue. Check Cube.hpp for heuristic
 CubeState
 parallelAStarHelper(frontierAStar_t frontier, const moveset_t& moves, bool& finished, std::mutex& lock);
 
@@ -198,7 +194,8 @@ main()
     std::cout << m << ' ';
   std::cout << '\n';
 
-  std::cout << t.elapsed() / 1000 << '\n';
+  printf("Time: %.3f ms\n", t.elapsed());
+  
   return 0;
 }
 
@@ -244,6 +241,9 @@ serialBFS(Cube& cube)
     state.cube.move(move);
     state.solution.push_back(move);
 
+    if (state.cube.isSolved())
+      return state.solution;
+
     frontier.push(state);
   }
 
@@ -254,12 +254,11 @@ serialBFS(Cube& cube)
 
 // Serial Breadth-First search helper that searches all nodes after the inital
 // starting moves. Only adds states to the frontier if the moves don't show
-// they are looping infinitely, saving space. Returns once solution is at front
-// of the queue.
+// they are looping infinitely, saving space. Returns at first found solution.
 moveset_t
 serialBFSHelper(frontierBFS_t& frontier, const moveset_t& moves)
 {
-  while (!frontier.front().cube.isSolved())
+  while (true)
   {
     for (const auto& move : moves)
     {
@@ -269,14 +268,15 @@ serialBFSHelper(frontierBFS_t& frontier, const moveset_t& moves)
         copyState.cube.move(move);
         copyState.solution.push_back(move);
         
+        if (copyState.cube.isSolved())
+          return copyState.solution;
+
         frontier.push(copyState);
       }
     }
     
     frontier.pop();
   }
-
-  return frontier.front().solution;
 }
 
 /************************************************/
@@ -293,10 +293,10 @@ parallelBFS(Cube& cube, unsigned p)
     return moveset_t();
 
   bool finished = false;
-  std::mutex lock;
   moveset_t initMoves = getStartMoves(cube.getFaceNames());
 
   std::vector<std::future<CubeState>> threads;
+  std::mutex lock;
   for (unsigned tid = 0; tid < p; ++tid)
   {
     frontierBFS_t frontier;
@@ -319,7 +319,10 @@ parallelBFS(Cube& cube, unsigned p)
   {
     CubeState state = t.get();
     if (!foundSolved && state.cube.isSolved())
+    {
+      foundSolved = true;
       solved = state;
+    }
   }
 
   return solved.solution;
@@ -333,18 +336,8 @@ parallelBFS(Cube& cube, unsigned p)
 CubeState
 parallelBFSHelper(frontierBFS_t frontier, const moveset_t& moves, bool& finished, std::mutex& lock)
 {
-  while (true)
+  while (!finished)
   {
-    if (!finished && frontier.front().cube.isSolved())
-    { 
-      lock.lock();
-      finished = true;
-      lock.unlock();
-    }
-    
-    if (finished)
-      break;
-   
     for (const auto& move : moves)
     {
       if (uniqueMoves(move[0], frontier.front().solution))
@@ -352,6 +345,14 @@ parallelBFSHelper(frontierBFS_t frontier, const moveset_t& moves, bool& finished
         CubeState copyState(frontier.front());
         copyState.cube.move(move);
         copyState.solution.push_back(move);        
+        
+        if (!finished && copyState.cube.isSolved())
+        { 
+          lock.lock();
+          finished = true;
+          lock.unlock();
+          return copyState;
+        }
 
         frontier.push(copyState);
       }
@@ -365,6 +366,7 @@ parallelBFSHelper(frontierBFS_t frontier, const moveset_t& moves, bool& finished
 
 /************************************************/
 
+// Serial A* adapted from BFS.
 moveset_t
 serialAStar(Cube& cube)
 {
@@ -379,6 +381,9 @@ serialAStar(Cube& cube)
     CubeState state(cube);
     state.cube.move(move);
     state.solution.push_back(move);
+    
+    if (state.cube.isSolved())
+      return state.solution;
 
     frontier.push(state);
   }
@@ -388,15 +393,15 @@ serialAStar(Cube& cube)
 
 /************************************************/
 
+// Serial A* search helper, adapted from BFS that uses a std::priority_queue instead
+// of a std::queue and returns as soon as a solution is found rather than
+// waiting for it to be at the top of the queue. Check Cube.hpp for heuristic.
 moveset_t
 serialAStarHelper(frontierAStar_t& frontier, const moveset_t& moves)
 {
   frontierAStar_t temp;
-  while (true)
+  while (!frontier.top().cube.isSolved())
   {
-    if (frontier.top().cube.isSolved())
-      break;
-    
     if (frontier.size() == 0)
     {
       frontier = temp;
@@ -413,7 +418,7 @@ serialAStarHelper(frontierAStar_t& frontier, const moveset_t& moves)
         
         if (copyState.cube.isSolved())
           return copyState.solution;
-        
+
         temp.push(copyState);
       }
     }
@@ -426,6 +431,7 @@ serialAStarHelper(frontierAStar_t& frontier, const moveset_t& moves)
 
 /************************************************/
 
+// Parallel A* adapted from parallel BFS.
 moveset_t
 parallelAStar(Cube& cube, unsigned p)
 {
@@ -433,10 +439,10 @@ parallelAStar(Cube& cube, unsigned p)
     return moveset_t();
 
   bool finished = false;
-  std::mutex lock;
   moveset_t initMoves = getStartMoves(cube.getFaceNames());
 
   std::vector<std::future<CubeState>> threads;
+  std::mutex lock;
   for (unsigned tid = 0; tid < p; ++tid)
   {
     frontierAStar_t frontier;
@@ -459,7 +465,10 @@ parallelAStar(Cube& cube, unsigned p)
   {
     CubeState state = t.get();
     if (!foundSolved && state.cube.isSolved())
+    {
+      foundSolved = true;
       solved = state;
+    }
   }
 
   return solved.solution;
@@ -467,22 +476,15 @@ parallelAStar(Cube& cube, unsigned p)
 
 /************************************************/
 
+// Parallel A* search helper, adapted from BFS that uses a std::priority_queue instead
+// of a std::queue and returns as soon as a solution is found rather than
+// waiting for it to be at the top of the queue. Check Cube.hpp for heuristic
 CubeState
 parallelAStarHelper(frontierAStar_t frontier, const moveset_t& moves, bool& finished, std::mutex& lock)
 {
   frontierAStar_t temp;
-  while (true)
+  while (!finished)
   {
-    if (frontier.top().cube.isSolved())
-    {
-      lock.lock();
-      finished = true;
-      lock.unlock();
-    }
-
-    if (finished)
-      break;
-    
     if (frontier.size() == 0)
     {
       frontier = temp;

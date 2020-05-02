@@ -8,6 +8,7 @@ const unsigned PIECE_COUNT       = 48;
 const unsigned CYCLE_LENGTH      = 4;
 const unsigned CYCLE_COUNT       = 5;
 const unsigned START_MOVE_COUNT  = 18;
+const unsigned UNIQUE_EDGE_COUNT = 12;
 constexpr char MOVE_NAMES[7]     = "ULFRBD";
 constexpr char OPP_MOVE_NAMES[7] = "DRBLFU";
 constexpr char COLOR_NAMES[7]    = "WOGRBY";
@@ -22,4 +23,5 @@ const int MOVE_CYCLES[6][5][4]
   { { 40, 42, 47, 45 }, { 41, 44, 46, 43 }, { 21, 29, 37, 13 }, { 22, 30, 38, 14 }, { 23, 31, 39, 15 } }
 };
 
+const int EDGES[12] = { 1, 3, 4, 6, 10, 11, 13, 20, 22, 28, 31, 38 };
 #endif

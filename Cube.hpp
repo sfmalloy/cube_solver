@@ -181,63 +181,18 @@ public:
     return OPP_MOVE_NAMES[m_moveMap[face]];
   }
 
-  // See source 2 for heuristic explaination
-  int
-  distanceToSolved()
-  {
-    int numWrongEdges = 0;
-    int numWrongCorners = 0;
-    
-    piece_t cornerOffsets[4] = { 0, 2, 5, 7 };
-    piece_t edgeOffsets[4] = { 1, 3, 4, 6 };
-    
-    for (unsigned i = 0; i < PIECE_COUNT; i += 8)
-    {
-      // Corners
-      for (unsigned c = 0; c < 4; ++c)
-        if (m_cube[i + cornerOffsets[c]] != cornerOffsets[c])
-          ++numWrongCorners;
-      
-      // Edges
-      for (unsigned e = 0; e < 4; ++e)
-        if (m_cube[i + edgeOffsets[e]] != edgeOffsets[e])
-          ++numWrongEdges;
-    }
-
-    return (numWrongEdges / 4) + (numWrongCorners / 4);
-  }
-  
-  // See source 2 for heuristic explaination
+  // Adapted from
+  // https://www.cs.princeton.edu/courses/archive/fall06/cos402/papers/korfrubik.pdf 
   int
   distanceToSolved() const
   {
-    int numWrongEdges = 0;
-    int numWrongCorners = 0;
-    
-    piece_t cornerOffsets[4] = { 0, 2, 5, 7 };
-    piece_t edgeOffsets[4] = { 1, 3, 4, 6 };
-    for (unsigned i = 0; i < PIECE_COUNT; i += 8)
-    {
-      // Corners
-      for (unsigned c = 0; c < 4; ++c)
-        if (m_cube[i + cornerOffsets[c]] != cornerOffsets[c])
-          ++numWrongCorners;
-      
-      // Edges
-      for (unsigned e = 0; e < 4; ++e)
-        if (m_cube[i + edgeOffsets[e]] != edgeOffsets[e])
-          ++numWrongEdges;
-    }
+    int totalDist = 0;
+    for (unsigned i = 0; i < UNIQUE_EDGE_COUNT; ++i)
+      totalDist += EDGES[i] - m_cube[EDGES[i]];
 
-    return (numWrongEdges / 4) + (numWrongCorners / 4);
+    return totalDist / 4;
   }
   
-  bool
-  operator<(const Cube& other)
-  {
-    return distanceToSolved() < other.distanceToSolved();
-  }
- 
   bool
   operator<(const Cube& other) const
   {

@@ -1,5 +1,7 @@
 *.o
 *.txt
+*.csv
+*.py
 .autolab-asmt
 compile_commands.json
 driver

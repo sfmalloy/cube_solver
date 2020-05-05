@@ -52,12 +52,7 @@ public:
     for (unsigned i = 0; i < PIECE_COUNT; ++i)
       m_cube[i] = i;
     
-    for (unsigned i = 0; i < SIDE_COUNT; ++i)
-      m_moveMap[MOVE_NAMES[i]] = i;
-
-    for (unsigned i = 0; i < SIDE_COUNT; ++i)
-      for (unsigned c = 0; c < SIDE_PIECE_COUNT; ++c)
-        m_colors.push_back(COLOR_NAMES[i]);
+    init();
   }
   
   // copy ctor
@@ -65,15 +60,11 @@ public:
   {
     for (unsigned i = 0; i < PIECE_COUNT; ++i)
       m_cube[i] = other.m_cube[i];
-    
-    for (unsigned i = 0; i < SIDE_COUNT; ++i)
-      m_moveMap[MOVE_NAMES[i]] = i;
-    
-    for (unsigned i = 0; i < SIDE_COUNT; ++i)
-      for (unsigned c = 0; c < SIDE_PIECE_COUNT; ++c)
-        m_colors.push_back(COLOR_NAMES[i]);
+
+    init();
   }
-  
+
+
   // Prints all 6 sides of cube including face names
   void
   printCube()
@@ -113,10 +104,7 @@ public:
   move(const std::string& moveStr)
   {
     if (m_moveMap.find(moveStr[0]) == m_moveMap.end())
-    {
-      fprintf(stderr, "Invalid move (%s), exiting\n", moveStr.c_str());
-      exit(1);
-    }
+      fprintf(stderr, "Invalid move (%s)\n", moveStr.c_str());
  
     unsigned index = m_moveMap[moveStr[0]];
     if (moveStr.size() == 2)
@@ -129,10 +117,7 @@ public:
         rotateSide(index, false);
       }
       else
-      {
-        fprintf(stderr, "Invalid move (%s), exiting\n", moveStr.c_str());
-        exit(1);
-      }
+        fprintf(stderr, "Invalid move (%s)\n", moveStr.c_str());
     }
     else if (moveStr.size() == 1 && m_moveMap.find(moveStr[0]) != m_moveMap.end())
       rotateSide(index, false);
@@ -226,6 +211,18 @@ private:
       for (unsigned j = 0; j < CYCLE_LENGTH; ++j)
         m_cube[cycle[j]] = buffer[j];
     }
+  }
+  
+  // Set move names and color names
+  void
+  init() 
+  {
+    for (unsigned i = 0; i < SIDE_COUNT; ++i)
+      m_moveMap[MOVE_NAMES[i]] = i;
+    
+    for (unsigned i = 0; i < SIDE_COUNT; ++i)
+      for (unsigned c = 0; c < SIDE_PIECE_COUNT; ++c)
+        m_colors.push_back(COLOR_NAMES[i]);
   }
 
   // member variables

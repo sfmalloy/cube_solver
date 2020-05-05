@@ -20,13 +20,11 @@
 
 /************************************************/
 // System includes
-#include <cstdlib>
 #include <iostream>
-#include <fstream>
+#include <cstdio>
 #include <sstream>
 #include <string>
 #include <unordered_map>
-#include <iterator>
 #include <cmath>
 
 /************************************************/
@@ -51,8 +49,6 @@ public:
   {
     for (unsigned i = 0; i < PIECE_COUNT; ++i)
       m_cube[i] = i;
-    
-    init();
   }
   
   // copy ctor
@@ -60,43 +56,6 @@ public:
   {
     for (unsigned i = 0; i < PIECE_COUNT; ++i)
       m_cube[i] = other.m_cube[i];
-
-    init();
-  }
-
-
-  // Prints all 6 sides of cube including face names
-  void
-  printCube()
-  {
-    for (unsigned i = 0; i < SIDE_COUNT; ++i)
-    {
-      printf("%c\n", MOVE_NAMES[i]);
-      printSide(i);
-    }
-  }
-
-  // print single side
-  void
-  printSide(int sideNum)
-  {
-    unsigned index = 8 * sideNum + 4, printCount = 0;
-    for (unsigned i = index - 4; i < index; ++i, ++printCount)
-    {
-      printf("%2c ", m_colors[m_cube[i]]);
-      if (printCount % 3 == 2)
-        std::cout << '\n';
-    }
-
-    printf("%2c ", m_colors[sideNum * 8]);
-    ++printCount;
-
-    for (unsigned i = index; i < index + 4; ++i, ++printCount)
-    {
-      printf("%2c ", m_colors[m_cube[i]]);
-      if (printCount % 3 == 2)
-        std::cout << '\n';
-    }
   }
 
   // rotate single side given a move
@@ -106,7 +65,7 @@ public:
     if (m_moveMap.find(moveStr[0]) == m_moveMap.end())
       fprintf(stderr, "Invalid move (%s)\n", moveStr.c_str());
  
-    unsigned index = m_moveMap[moveStr[0]];
+    unsigned index = m_moveMap.at(moveStr[0]);
     if (moveStr.size() == 2)
     {
       if (moveStr[1] == '\'')
@@ -154,18 +113,6 @@ public:
     return true;
   }
   
-  std::string
-  getFaceNames()
-  {
-    return MOVE_NAMES;
-  }
-
-  char
-  oppositeFace(const char& face)
-  {
-    return OPP_MOVE_NAMES[m_moveMap[face]];
-  }
-
   // Adapted from
   // https://www.cs.princeton.edu/courses/archive/fall06/cos402/papers/korfrubik.pdf 
   int
@@ -213,22 +160,8 @@ private:
     }
   }
   
-  // Set move names and color names
-  void
-  init() 
-  {
-    for (unsigned i = 0; i < SIDE_COUNT; ++i)
-      m_moveMap[MOVE_NAMES[i]] = i;
-    
-    for (unsigned i = 0; i < SIDE_COUNT; ++i)
-      for (unsigned c = 0; c < SIDE_PIECE_COUNT; ++c)
-        m_colors.push_back(COLOR_NAMES[i]);
-  }
-
   // member variables
   piece_t m_cube[PIECE_COUNT];
-  std::unordered_map<char, unsigned> m_moveMap;
-  std::string m_colors;
 };
 
 #endif

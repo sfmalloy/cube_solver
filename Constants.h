@@ -1,3 +1,5 @@
+#include <unordered_map>
+
 #ifndef CYCLES_H
 #define CYCLES_H
 
@@ -24,4 +26,6 @@ const int MOVE_CYCLES[6][5][4]
 };
 
 const int EDGES[12] = { 1, 3, 4, 6, 10, 11, 13, 20, 22, 28, 31, 38 };
+
+const std::unordered_map<char, unsigned> m_moveMap { {'U', 0}, {'L', 1}, {'F', 2}, {'R', 3}, {'B', 4}, {'D', 5} };
 #endif

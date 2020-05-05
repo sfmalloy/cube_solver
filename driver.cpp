@@ -40,12 +40,6 @@ struct CubeState
   { }
 
   bool
-  operator<(const CubeState& state)
-  {
-    return cube < state.cube;
-  }
-
-  bool
   operator<(const CubeState& state) const
   {
     return cube < state.cube;
@@ -293,7 +287,7 @@ parallelBFS(Cube& cube, unsigned p)
     return moveset_t();
 
   bool finished = false;
-  moveset_t initMoves = getStartMoves(cube.getFaceNames());
+  moveset_t initMoves = getStartMoves(MOVE_NAMES);
 
   std::vector<std::future<CubeState>> threads;
   std::mutex lock;
@@ -373,7 +367,7 @@ serialAStar(Cube& cube)
   if (cube.isSolved())
     return moveset_t();
 
-  moveset_t initMoves = getStartMoves(cube.getFaceNames());
+  moveset_t initMoves = getStartMoves(MOVE_NAMES);
   frontierAStar_t frontier;
 
   for (const auto& move : initMoves)
@@ -439,7 +433,7 @@ parallelAStar(Cube& cube, unsigned p)
     return moveset_t();
 
   bool finished = false;
-  moveset_t initMoves = getStartMoves(cube.getFaceNames());
+  moveset_t initMoves = getStartMoves(MOVE_NAMES);
 
   std::vector<std::future<CubeState>> threads;
   std::mutex lock;

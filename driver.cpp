@@ -11,6 +11,7 @@
 #include <queue>
 #include <mutex>
 #include <future>
+#include <stack>
 
 /************************************************/
 // Local includes
@@ -58,9 +59,22 @@ struct CubeState
 
 typedef std::queue<CubeState> frontierBFS_t;
 typedef std::priority_queue<CubeState> frontierAStar_t;
+typedef std::stack<CubeState> frontierID_t;
 
 /************************************************/
 // Forward declarations
+
+moveset_t
+serialID(Cube& cube);
+
+moveset_t
+serialIDHelper(frontierID_t& frontier, const moveset_t& moves, size_t maxDepth);
+
+moveset_t
+parallelID(Cube& cube, unsigned p);
+
+CubeState
+parallelIDHelper(frontierID_t frontier, const moveset_t& moves, bool& finished, std::mutex& lock, size_t maxDepth);
 
 // Returns strings representing all start moves based on face names.
 moveset_t
@@ -139,7 +153,7 @@ main()
   std::string version;
   std::cin >> version;
 
-  std::cout << "Algorithm (bfs/astar) => ";
+  std::cout << "Algorithm (bfs/astar/itdeep) => ";
   std::string algorithm;
   std::cin >> algorithm;
 
@@ -157,10 +171,16 @@ main()
       solution = serialBFS(cube);
       t.stop();
     }
-    else
+    else if (algorithm == "astar")
     {
       t.start();
       solution = serialAStar(cube);
+      t.stop();
+    }
+    else
+    {
+      t.start();
+      solution = serialID(cube);
       t.stop();
     }
   }
@@ -175,10 +195,16 @@ main()
       solution = parallelBFS(cube, p);
       t.stop();
     }
-    else
+    else if (algorithm == "astar")
     {
       t.start();
       solution = parallelAStar(cube, p);
+      t.stop();
+    }
+    else
+    {
+      t.start();
+      solution = parallelID(cube, p);
       t.stop();
     }
   }
@@ -214,6 +240,168 @@ getStartMoves(const std::string& faceNames)
 
   return moves;
 }
+
+/************************************************/
+
+// Serial Depth-First Search. First level is populated with every possible
+// starting move. Each vertex is one CubeState struct instance with a copy of
+// cube and a solution vector.
+moveset_t
+serialID(Cube& cube)
+{
+  if (cube.isSolved())
+    return moveset_t();
+
+  moveset_t initMoves = getStartMoves(MOVE_NAMES);
+  frontierID_t frontier;
+
+  for (const auto& move : initMoves)
+  {
+    CubeState state(cube);
+    state.cube.move(move);
+    state.solution.push_back(move);
+
+    if (state.cube.isSolved())
+      return state.solution;
+
+    frontier.push(state);
+  }
+
+  for (size_t i = 2; i <= 20; ++i)
+  {
+    std::cout << "Current depth: " << i << '\n';
+    frontierID_t frontierCopy = frontier;
+    moveset_t sol = serialIDHelper(frontierCopy, initMoves, i);
+    if (sol.size() > 0)
+      return sol;
+  }
+
+  return moveset_t();
+}
+
+/************************************************/
+
+// Serial Breadth-First search helper that searches all nodes after the inital
+// starting moves. Only adds states to the frontier if the moves don't show
+// they are looping infinitely, saving space. Returns at first found solution.
+moveset_t
+serialIDHelper(frontierID_t& frontier, const moveset_t& moves, size_t maxDepth)
+{
+  while (frontier.size() > 0)
+  {
+    auto curr = frontier.top();
+    frontier.pop();
+
+    if (curr.solution.size() < maxDepth) 
+    {
+      for (const auto& move : moves)
+      {
+        if (uniqueMoves(move[0], curr.solution))
+        {
+          CubeState copyState(curr);
+          copyState.cube.move(move);
+          copyState.solution.push_back(move);
+          
+          if (copyState.cube.isSolved())
+            return copyState.solution;
+
+          frontier.push(copyState);
+        }
+      }
+    }
+  }
+
+  return moveset_t();
+}
+
+moveset_t
+parallelID(Cube& cube, unsigned p)
+{
+  if (cube.isSolved())
+    return moveset_t();
+
+  bool finished = false;
+  moveset_t initMoves = getStartMoves(MOVE_NAMES);
+  CubeState solved;
+
+  for (size_t i = 2; i <= 20; ++i) {
+    std::cout << "Current depth: " << i << '\n';
+    std::vector<std::future<CubeState>> threads;
+    std::mutex lock;
+    for (unsigned tid = 0; tid < p; ++tid)
+    {
+      frontierID_t frontier;
+      for (unsigned m = partitionStart(p, tid); m < partitionStart(p, tid + 1); ++m)
+      {
+        CubeState state(cube);
+        state.cube.move(initMoves[m]);
+        state.solution.push_back(initMoves[m]);
+
+        frontier.push(state);
+      }
+
+      threads.push_back(std::async(std::launch::async, parallelIDHelper, 
+            frontier, std::cref(initMoves), std::ref(finished), std::ref(lock), i));
+    }
+
+    bool foundSolved = false;
+    for (auto& t : threads)
+    {
+      CubeState state = t.get();
+      if (!foundSolved && state.solution.size() > 0 && state.cube.isSolved())
+      {
+        foundSolved = true;
+        solved = state;
+      }
+    }
+
+    if (foundSolved)
+      break;
+  }
+  return solved.solution;
+}
+
+CubeState
+parallelIDHelper(frontierID_t frontier, const moveset_t& moves, bool& finished, std::mutex& lock, size_t maxDepth)
+{
+  while (!finished && frontier.size() > 0)
+  {
+    auto curr = frontier.top();
+    frontier.pop();
+    
+    if (curr.solution.size() < maxDepth) 
+    {
+      for (const auto& move : moves)
+      {
+        if (uniqueMoves(move[0], curr.solution))
+        {
+          CubeState copyState(curr);
+          copyState.cube.move(move);
+          copyState.solution.push_back(move);      
+          
+          if (!finished && copyState.cube.isSolved())
+          {
+            lock.lock();
+            finished = true;
+            lock.unlock();
+            return copyState;
+          }
+
+          frontier.push(copyState);
+        }
+      }
+    }
+  }
+
+  return CubeState();
+}
+
+
+
+
+
+
+
 
 /************************************************/
 

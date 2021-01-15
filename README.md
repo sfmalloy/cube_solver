@@ -11,4 +11,5 @@
     $ ./driver
 
 Sample inputs can be found in sample_inputs.dat
-WARNING: This will eat your RAM, don't go above 6 moves on 16GB of RAM.
+
+**WARNING:** BFS and A* will eat your RAM, don't go above 6 moves with 16GB of RAM.

@@ -10,3 +10,5 @@ oldDriver.cpp
 oldDriver
 test.cpp
 test
+.vscode/
+*.swp
